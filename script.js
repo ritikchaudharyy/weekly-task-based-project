@@ -171,4 +171,3 @@ document.getElementById("generateBtn").addEventListener("click", generate);
 updateUI();
 
 });
- 
