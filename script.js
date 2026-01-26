@@ -169,15 +169,6 @@ document.getElementById("generateBtn").addEventListener("click", generate);
 
 // Init
 updateUI();
-function openSection(id){
-  document.querySelectorAll(".section").forEach(sec=>{
-    sec.classList.remove("active");
-  });
-  document.getElementById(id).classList.add("active");
-}
 
-function logout(){
-  localStorage.clear();
-  location.reload();
-}
-
+})
+ 
