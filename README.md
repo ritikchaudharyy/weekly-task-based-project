@@ -1,1 +1,3 @@
-# Ai-timetable-project
+## Improvements
+- Enhanced UI structure
+- Better readability
