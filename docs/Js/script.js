@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", function () {
+
 
 /* ==================== GLOBAL STATE ==================== */
 let slide = 0;
@@ -458,151 +458,74 @@ window.removeGoal = function(index) {
   }
 }
 
-/* ==================== TASKS WITH AI ==================== */
+/* ==================== TASKS AREA (IMPORTANT) ==================== */
 function renderTasksArea() {
   const tasksArea = document.getElementById("tasksArea");
-  
-  if (goals.length === 0) {
-    tasksArea.innerHTML = `
-      <div class="empty-state">
-        <p>🎯 Please add goals first before creating tasks</p>
-      </div>
-    `;
-    return;
-  }
 
   tasksArea.innerHTML = goals.map((goal, index) => `
-    <div class="goal-task-box" style="border-left: 4px solid ${goal.color}">
-      <h3 class="goal-task-title" style="color: ${goal.color}">
-        <span>${goal.name}</span>
-      </h3>
-      
-      <button class="ai-generate-btn" onclick="generateTasksWithAI(${index})" id="aiBtn${index}">
+    <div class="goal-task-box">
+      <h3 style="color:${goal.color}">${goal.name}</h3>
+
+      <button id="aiBtn${index}" onclick="generateTasksWithAI(${index})">
         ✨ Generate Tasks with AI
       </button>
-      
-      <div id="aiStatus${index}" class="ai-status"></div>
-      
-      <div id="aiTasks${index}" class="ai-tasks-list"></div>
-      
-      <div class="manual-tasks-input">
-        <label style="display:block; margin-bottom:8px; font-weight:600">Or add tasks manually:</label>
-        <textarea 
-          id="tasks${index}" 
-          placeholder="• Study concepts for 1 hour
-- Complete practice exercises
-- Review and take notes"
-          rows="5"
-        ></textarea>
-        <p class="task-tips">💡 Tip: Be specific about duration and action (e.g., "Study for 30 mins" not just "Study")</p>
-      </div>
+
+      <div id="aiStatus${index}"></div>
+      <div id="aiTasks${index}"></div>
+
+      <textarea id="tasks${index}" rows="5"
+        placeholder="Add tasks manually (one per line)"></textarea>
     </div>
   `).join("");
 }
 
-window.generateTasksWithAI = async function(index) {
+/* ==================== AI TASK GENERATION ==================== */
+window.generateTasksWithAI = function(index) {
   const goal = goals[index];
-  const statusEl = document.getElementById(`aiStatus${index}`);
-  const aiTasksEl = document.getElementById(`aiTasks${index}`);
-  const aiBtn = document.getElementById(`aiBtn${index}`);
-  
-  aiBtn.disabled = true;
-  aiBtn.innerHTML = '<span class="spinner"></span> Generating...';
-  
-  statusEl.innerHTML = `
-    <div class="ai-loading">
-      <span class="spinner"></span>
-      <span>🤖 AI is analyzing "${goal.name}" and creating specific tasks...</span>
-    </div>
-  `;
+  const status = document.getElementById(`aiStatus${index}`);
+  const list = document.getElementById(`aiTasks${index}`);
+  const btn = document.getElementById(`aiBtn${index}`);
 
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        messages: [
-          {
-            role: "user",
-            content: `You are a study planning assistant helping a student with the goal: "${goal.name}". 
-            
-Generate 5-7 specific, actionable study tasks. Each task should:
-- Be specific with duration (e.g., "Study Chapter 3 for 45 mins")
-- Include time estimates
-- Be realistic for students
-- Progress from easier to harder tasks
-- Be actionable and clear
+  btn.disabled = true;
+  status.innerHTML = "🤖 Thinking...";
 
-Return ONLY a JSON array of task strings, nothing else. No markdown, no preamble, no explanation.
-
-Example format:
-["Study core concepts for 30 mins","Complete 5 practice problems for 45 mins","Review notes and summarize key points for 20 mins","Solve 3 challenging problems for 1 hour","Create flashcards for 25 mins"]`
-          }
-        ],
-      })
-    });
-
-    const data = await response.json();
-    const content = data.content[0].text;
-    
-    const cleanContent = content.replace(/```json|```/g, '').trim();
-    const tasks = JSON.parse(cleanContent);
-    
-    if (Array.isArray(tasks) && tasks.length > 0) {
-      statusEl.innerHTML = `
-        <div class="ai-success">
-          <span>✅</span>
-          <span>Tasks generated successfully! Click on tasks to add them.</span>
-        </div>
-      `;
-      
-      aiTasksEl.innerHTML = tasks.map((task, idx) => `
-        <div class="ai-task-item" onclick="addAITaskToManual(${index}, '${task.replace(/'/g, "\\'")}', ${idx})">
-          <span>➕</span>
-          <span>${task}</span>
-        </div>
-      `).join("");
-      
-      aiBtn.innerHTML = '✨ Generate New Tasks';
-    } else {
-      throw new Error('Invalid response format');
-    }
-  } catch (error) {
-    console.error('AI generation error:', error);
-    statusEl.innerHTML = `
-      <div class="ai-error">
-        <span>❌</span>
-        <span>AI generation failed. Please add tasks manually below.</span>
+  setTimeout(() => {
+    const tasks = generateSmartTasks(goal.name);
+    list.innerHTML = tasks.map((t, i) => `
+      <div onclick="addAITaskToManual(${index}, '${t.replace(/'/g,"\\'")}', ${i})">
+        ➕ ${t}
       </div>
-    `;
-    aiBtn.innerHTML = '✨ Try Again';
-  } finally {
-    aiBtn.disabled = false;
+    `).join("");
+    status.innerHTML = "✅ Tasks ready";
+    btn.disabled = false;
+  }, 1000);
+};
+
+function generateSmartTasks(goal) {
+  const g = goal.toLowerCase();
+  if (g.includes("dsa")) {
+    return [
+      "Study arrays for 30 mins",
+      "Solve 5 array problems",
+      "Learn linked lists for 30 mins",
+      "Solve 3 linked list problems",
+      "Review mistakes"
+    ];
   }
+  return [
+    `Understand basics of ${goal}`,
+    `Practice related problems`,
+    `Revise notes`,
+    `Work on challenging task`,
+    `Plan next steps`
+  ];
 }
 
-window.addAITaskToManual = function(goalIndex, taskText, taskIdx) {
-  const textarea = document.getElementById(`tasks${goalIndex}`);
-  const currentValue = textarea.value.trim();
-  
-  if (currentValue) {
-    textarea.value = currentValue + "\n" + taskText;
-  } else {
-    textarea.value = taskText;
-  }
-  
-  const taskItem = document.querySelectorAll(`#aiTasks${goalIndex} .ai-task-item`)[taskIdx];
-  if (taskItem) {
-    taskItem.classList.add("selected");
-    taskItem.innerHTML = '<span>✅</span><span>' + taskText + '</span>';
-  }
-  
-  showNotification("Task added! ✅", "success");
-}
+window.addAITaskToManual = function(index, task) {
+  const t = document.getElementById(`tasks${index}`);
+  t.value += (t.value ? "\n" : "") + task;
+  showNotification("Task added", "success");
+};
 
 /* ==================== BATCHING ==================== */
 function renderBatching() {
@@ -983,5 +906,3 @@ document.getElementById("generateBtn").addEventListener("click", generatePlan);
 
 /* ==================== INITIALIZE ==================== */
 updateUI();
-
-});

@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const connectDB = require('./config/database');
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -13,8 +12,12 @@ const aiRoutes = require('./routes/ai');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Database connection
-connectDB();
+/*
+|--------------------------------------------------------------------------
+| PHASE 2: DATABASE TEMPORARILY DISABLED
+| MongoDB will be enabled later in PHASE 3
+|--------------------------------------------------------------------------
+*/
 
 // Middleware
 app.use(cors({
@@ -40,15 +43,15 @@ app.use('/api/ai', aiRoutes);
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
+  res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
 });
-
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     service: 'Weekly Task Based AI Backend',
+    mode: 'AI Only (No Database)',
     time: new Date().toISOString()
   });
 });
@@ -78,6 +81,7 @@ app.listen(PORT, () => {
 📍 Port: ${PORT}
 🌱 Environment: ${process.env.NODE_ENV || 'development'}
 🤖 AI Mode: Free APIs with Auto Fallback
+🧠 Database: DISABLED (Phase 2)
 ══════════════════════════════════════
 `);
 });

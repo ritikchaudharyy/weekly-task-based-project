@@ -7,16 +7,11 @@ const { checkFeasibility } = require('../ai/feasibilityCheck');
 const { suggestTaskDowngrade } = require('../ai/taskDowngrade');
 const { generateWeeklyReflection } = require('../ai/weeklyReflection');
 const { checkOverthinking } = require('../ai/overthinkingGuard');
-const { callClaude } = require('../ai/claudeAPI');
+const { callAI } = require('../ai/aiAPI');
 
 // ===========================================
 // AI TASK GENERATION
 // ===========================================
-/**
- * @route   POST /api/ai/generate-tasks
- * @desc    Generate tasks from a goal using AI
- * @access  Protected
- */
 router.post('/generate-tasks', protect, async (req, res) => {
   try {
     const { goalName, goalCategory } = req.body;
@@ -40,23 +35,22 @@ Requirements:
 - Consider student energy levels
 - Format: One task per line, starting with •
 
-Example format:
+Example:
 • Study chapter concepts for 1 hour
 • Complete 10 practice problems
 • Create summary notes (30 mins)
 • Review with flashcards (45 mins)
 • Take practice quiz
 
-Now generate tasks for the goal above:`;
+Generate tasks now:`;  
 
-    const aiResponse = await callClaude(prompt, 1500);
+    const aiResponse = await callAI(prompt);
 
-    // Parse tasks from response
     const tasks = aiResponse
       .split('\n')
       .filter(line => line.trim().startsWith('•') || line.trim().startsWith('-'))
       .map(line => line.replace(/^[•\-]\s*/, '').trim())
-      .filter(task => task.length > 0);
+      .filter(Boolean);
 
     res.json({
       success: true,
@@ -66,10 +60,10 @@ Now generate tasks for the goal above:`;
     });
 
   } catch (error) {
-    console.error('AI Task Generation Error:', error);
+    console.error('AI Task Generation Error:', error.message);
     res.status(500).json({
       success: false,
-      message: 'Failed to generate tasks with AI',
+      message: 'Failed to generate tasks',
       error: error.message
     });
   }
@@ -78,11 +72,6 @@ Now generate tasks for the goal above:`;
 // ===========================================
 // FEASIBILITY CHECK
 // ===========================================
-/**
- * @route   POST /api/ai/check-feasibility
- * @desc    Check if weekly plan is feasible
- * @access  Protected
- */
 router.post('/check-feasibility', protect, async (req, res) => {
   try {
     const weeklyPlan = req.body;
@@ -95,11 +84,10 @@ router.post('/check-feasibility', protect, async (req, res) => {
     }
 
     const analysis = await checkFeasibility(weeklyPlan);
-
     res.json(analysis);
 
   } catch (error) {
-    console.error('Feasibility Check Error:', error);
+    console.error('Feasibility Check Error:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to check feasibility',
@@ -111,11 +99,6 @@ router.post('/check-feasibility', protect, async (req, res) => {
 // ===========================================
 // TASK DOWNGRADE SUGGESTION
 // ===========================================
-/**
- * @route   POST /api/ai/suggest-downgrade
- * @desc    Suggest easier alternative for missed task
- * @access  Protected
- */
 router.post('/suggest-downgrade', protect, async (req, res) => {
   try {
     const { taskName, difficulty, missedCount } = req.body;
@@ -136,7 +119,7 @@ router.post('/suggest-downgrade', protect, async (req, res) => {
     res.json(suggestion);
 
   } catch (error) {
-    console.error('Task Downgrade Error:', error);
+    console.error('Task Downgrade Error:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to generate downgrade suggestion',
@@ -148,11 +131,6 @@ router.post('/suggest-downgrade', protect, async (req, res) => {
 // ===========================================
 // WEEKLY REFLECTION
 // ===========================================
-/**
- * @route   POST /api/ai/weekly-reflection
- * @desc    Generate end-of-week AI reflection
- * @access  Protected
- */
 router.post('/weekly-reflection', protect, async (req, res) => {
   try {
     const weekData = req.body;
@@ -165,11 +143,10 @@ router.post('/weekly-reflection', protect, async (req, res) => {
     }
 
     const reflection = await generateWeeklyReflection(weekData);
-
     res.json(reflection);
 
   } catch (error) {
-    console.error('Weekly Reflection Error:', error);
+    console.error('Weekly Reflection Error:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to generate weekly reflection',
@@ -181,11 +158,6 @@ router.post('/weekly-reflection', protect, async (req, res) => {
 // ===========================================
 // OVERTHINKING GUARD
 // ===========================================
-/**
- * @route   POST /api/ai/check-overthinking
- * @desc    Check if user is overthinking and provide warning
- * @access  Protected
- */
 router.post('/check-overthinking', protect, async (req, res) => {
   try {
     const { editCount, daysInactive } = req.body;
@@ -205,7 +177,7 @@ router.post('/check-overthinking', protect, async (req, res) => {
     res.json(guardResponse);
 
   } catch (error) {
-    console.error('Overthinking Guard Error:', error);
+    console.error('Overthinking Guard Error:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to check overthinking',
@@ -215,13 +187,8 @@ router.post('/check-overthinking', protect, async (req, res) => {
 });
 
 // ===========================================
-// AI INSIGHTS (General)
+// AI INSIGHTS
 // ===========================================
-/**
- * @route   POST /api/ai/get-insights
- * @desc    Get general AI insights for weekly plan
- * @access  Protected
- */
 router.post('/get-insights', protect, async (req, res) => {
   try {
     const { dailyTasks, mainFocusDay, mood } = req.body;
@@ -233,49 +200,35 @@ router.post('/get-insights', protect, async (req, res) => {
       });
     }
 
-    // Group tasks by day
     const tasksByDay = dailyTasks.reduce((acc, task) => {
       if (!acc[task.day]) acc[task.day] = [];
       acc[task.day].push(task);
       return acc;
     }, {});
 
-    // Calculate workload per day
-    const workloadSummary = Object.entries(tasksByDay).map(([day, tasks]) => {
-      const load = tasks.length * 2; // Simplified load calculation
-      return `${day}: ${tasks.length} tasks (Load: ${load})`;
-    }).join('\n');
+    const workloadSummary = Object.entries(tasksByDay)
+      .map(([day, tasks]) => `${day}: ${tasks.length} tasks`)
+      .join('\n');
 
-    const prompt = `You are an AI productivity coach analyzing a student's weekly schedule.
+    const prompt = `You are a productivity coach.
 
-Weekly Overview:
+Weekly workload:
 ${workloadSummary}
 
-Main Focus Day: ${mainFocusDay}
-Current Mood: ${mood}
+Main focus day: ${mainFocusDay}
+Mood: ${mood}
 
-Provide 3-5 specific, actionable insights to optimize this schedule. Consider:
-- Workload distribution
-- Task balance across days
-- Break recommendations
-- Priority adjustments based on mood (${mood})
+Give 3-5 concise bullet insights to optimize this week.`;
 
-Keep it concise with bullet points.`;
-
-    const insights = await callClaude(prompt, 1500);
+    const insights = await callAI(prompt);
 
     res.json({
       success: true,
-      insights,
-      workloadSummary: Object.entries(tasksByDay).map(([day, tasks]) => ({
-        day,
-        taskCount: tasks.length,
-        load: tasks.length * 2
-      }))
+      insights
     });
 
   } catch (error) {
-    console.error('AI Insights Error:', error);
+    console.error('AI Insights Error:', error.message);
     res.status(500).json({
       success: false,
       message: 'Failed to generate insights',

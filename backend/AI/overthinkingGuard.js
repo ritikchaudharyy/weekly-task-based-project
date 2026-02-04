@@ -1,4 +1,4 @@
-const { callClaude } = require('./claudeAPI');
+const { callAI } = require('./aiAPI');
 
 /**
  * Anti-Overthinking Guard
@@ -22,7 +22,6 @@ async function checkOverthinking(editCount, daysInactive = 0) {
       };
     }
 
-    // Generate appropriate message
     let message;
     let severity;
 
@@ -48,9 +47,8 @@ async function checkOverthinking(editCount, daysInactive = 0) {
     };
 
   } catch (error) {
-    console.error('Overthinking Guard Error:', error);
-    
-    // Fallback to rule-based messages
+    console.error('Overthinking Guard Error:', error.message);
+
     return {
       success: true,
       triggered: editCount >= 5,
@@ -62,29 +60,33 @@ async function checkOverthinking(editCount, daysInactive = 0) {
 }
 
 /**
- * Generate AI warning message
+ * Generate AI warning message using unified AI fallback
  */
 async function generateAIWarning(editCount, severity) {
   const prompt = `You are a productivity coach. A student has edited their weekly plan ${editCount} times.
 
-This is a sign of overthinking and planning paralysis.
+This indicates overthinking and planning paralysis.
 
-Generate a firm but friendly one-sentence message to:
-1. Acknowledge they've planned enough
-2. Push them to start executing
-3. ${severity === 'severe' ? 'Be very direct and motivating' : 'Be gentle but clear'}
+Write ONE short sentence that:
+1. Confirms they planned enough
+2. Pushes them to start executing
+3. ${severity === 'severe' ? 'Be direct and motivating' : 'Be gentle but clear'}
 
-Keep it under 20 words. Make it memorable and actionable.
+Rules:
+- Max 20 words
+- Memorable
+- Action-focused
+- No quotes
 
 Examples:
-- "Planning band karo, kaam shuru karo. Execution beats perfection."
-- "You've refined this ${editCount} times. Time to DO, not just plan."
-- "Stop tweaking. Start working. Progress > Perfect plans."
+- Planning band karo, kaam shuru karo. Execution beats perfection.
+- You've refined this ${editCount} times. Time to DO, not plan.
+- Stop tweaking. Start working. Progress > Perfect plans.
 
-Your message:`;
+Message:`;  
 
-  const aiResponse = await callClaude(prompt, 100);
-  return aiResponse.trim().replace(/['"]/g, '');
+  const response = await callAI(prompt);
+  return response.trim().replace(/['"]/g, '');
 }
 
 /**
@@ -94,15 +96,15 @@ function getRuleBasedWarning(editCount) {
   if (editCount >= 10) {
     return '🛑 STOP PLANNING! You\'ve edited this 10+ times. Start executing NOW.';
   }
-  
+
   if (editCount >= 7) {
     return '⚠️ Too much planning. Time to take action. Execution beats perfection.';
   }
-  
+
   if (editCount >= 5) {
     return '💭 You\'ve planned enough. Start working on your first task right now.';
   }
-  
+
   return '📝 Your plan looks good. Time to execute!';
 }
 
@@ -113,12 +115,12 @@ function getInactivityMessage(daysInactive) {
   if (daysInactive >= 7) {
     return '⏰ It\'s been a week! Your plan is waiting. Start with the easiest task today.';
   }
-  
+
   if (daysInactive >= 5) {
-    return '⏰ 5 days without action. Don\'t let the plan gather dust. Begin now!';
+    return '⏰ 5 days inactive. Don\'t let momentum die. Begin now.';
   }
-  
-  return '⏰ 3+ days inactive. Even 10 minutes of work keeps momentum alive.';
+
+  return '⏰ 3+ days inactive. Even 10 minutes of work keeps progress alive.';
 }
 
 /**
@@ -140,7 +142,6 @@ function getSeverityLevel(editCount, daysInactive) {
 
 /**
  * Generate execution nudge
- * Simple reminder to start working
  */
 function getExecutionNudge() {
   const nudges = [
@@ -150,7 +151,7 @@ function getExecutionNudge() {
     '💪 Momentum starts with one small step today',
     '🚀 The best plan is the one you actually execute'
   ];
-  
+
   return nudges[Math.floor(Math.random() * nudges.length)];
 }
 
