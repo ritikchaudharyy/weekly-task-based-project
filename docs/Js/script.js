@@ -1,5 +1,3 @@
-
-
 /* ==================== GLOBAL STATE ==================== */
 let slide = 0;
 const slides = document.querySelectorAll(".slide");

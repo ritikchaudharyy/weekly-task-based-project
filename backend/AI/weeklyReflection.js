@@ -4,30 +4,28 @@ const { callAIStructured, handleAIError } = require('./aiAPI');
  * Weekly AI Reflection
  * Generates end-of-week analysis and suggestions
  * @param {Object} weekData - Week completion data
- * @returns {Promise<Object>} - Reflection analysis
+ * @returns {Promise<Object>} - Reflection analysis (DATA ONLY)
  */
 async function generateWeeklyReflection(weekData) {
-  try {
-    const {
-      totalTasks,
-      completedTasks,
-      missedTasks,
-      taskBreakdown,
-      mood,
-      mainFocusDay
-    } = weekData;
+  const {
+    totalTasks,
+    completedTasks,
+    missedTasks,
+    taskBreakdown,
+    mood,
+    mainFocusDay
+  } = weekData;
 
-    // Calculate basic metrics
-    const completionRate = Math.round((completedTasks / totalTasks) * 100);
-    
+  const completionRate = Math.round((completedTasks / totalTasks) * 100);
+
+  try {
     // Generate AI reflection
     const aiReflection = await generateAIReflection(weekData);
-    
+
     // Parse AI response into sections
     const sections = parseReflectionSections(aiReflection);
 
     return {
-      success: true,
       weekSummary: {
         totalTasks,
         completedTasks,
@@ -38,21 +36,24 @@ async function generateWeeklyReflection(weekData) {
       },
       reflection: sections,
       rawAIResponse: aiReflection,
+      fallbackMode: false,
       timestamp: new Date().toISOString()
     };
 
   } catch (error) {
     console.error('Weekly Reflection Error:', error);
-    
+
     // Fallback to rule-based reflection
     const fallbackReflection = generateFallbackReflection(weekData);
-    
+
     return {
-      success: true,
       weekSummary: {
-        totalTasks: weekData.totalTasks,
-        completedTasks: weekData.completedTasks,
-        completionRate: Math.round((weekData.completedTasks / weekData.totalTasks) * 100)
+        totalTasks,
+        completedTasks,
+        missedTasks,
+        completionRate,
+        mood,
+        mainFocusDay
       },
       reflection: fallbackReflection,
       fallbackMode: true,
@@ -69,14 +70,13 @@ async function generateAIReflection(weekData) {
     totalTasks,
     completedTasks,
     missedTasks,
-    taskBreakdown,
+    taskBreakdown = [],
     mood,
     mainFocusDay
   } = weekData;
 
   const completionRate = Math.round((completedTasks / totalTasks) * 100);
 
-  // Build detailed task breakdown
   const missedTasksList = taskBreakdown
     .filter(t => t.status === 'skipped')
     .map(t => `- ${t.taskName} (${t.day})`)
@@ -106,25 +106,25 @@ ${missedTasksList || 'None'}
 
 Generate a reflection with these sections:
 
-**What Went Well:**
+What Went Well:
 - Highlight achievements
 - Recognize patterns of success
 
-**What Went Wrong:**
+What Went Wrong:
 - Identify missed tasks
 - Note consistency issues
 
-**Possible Reasons:**
+Possible Reasons:
 - Analyze why tasks were missed
 - Consider mood and workload factors
 
-**Suggestions for Next Week:**
+Suggestions for Next Week:
 - Give 2-3 specific, actionable improvements
 - Be encouraging and realistic
 
-Keep each section to 2-3 bullet points. Be honest but supportive.`;
+Keep each section to 2-3 bullet points.`;
 
-  const aiResponse = await callClaudeStructured(prompt, 2000);
+  const aiResponse = await callAIStructured(prompt, 2000);
   return aiResponse;
 }
 
@@ -139,26 +139,31 @@ function parseReflectionSections(aiResponse) {
     suggestions: []
   };
 
-  const lines = aiResponse.split('\n').filter(line => line.trim());
+  if (!aiResponse || typeof aiResponse !== 'string') {
+    return sections;
+  }
 
+  const lines = aiResponse.split('\n').filter(line => line.trim());
   let currentSection = null;
 
   lines.forEach(line => {
-    const cleanLine = line.trim();
+    const cleanLine = line.trim().toLowerCase();
 
-    // Detect section headers
-    if (cleanLine.toLowerCase().includes('what went well')) {
+    if (cleanLine.includes('what went well')) {
       currentSection = 'whatWentWell';
-    } else if (cleanLine.toLowerCase().includes('what went wrong')) {
+    } else if (cleanLine.includes('what went wrong')) {
       currentSection = 'whatWentWrong';
-    } else if (cleanLine.toLowerCase().includes('possible reasons')) {
+    } else if (cleanLine.includes('possible reasons')) {
       currentSection = 'possibleReasons';
-    } else if (cleanLine.toLowerCase().includes('suggestions')) {
+    } else if (cleanLine.includes('suggestions')) {
       currentSection = 'suggestions';
-    }
-    // Add content to current section
-    else if (currentSection && (cleanLine.startsWith('-') || cleanLine.startsWith('•') || cleanLine.startsWith('*'))) {
-      const content = cleanLine.replace(/^[-•*]\s*/, '').trim();
+    } else if (
+      currentSection &&
+      (line.trim().startsWith('-') ||
+        line.trim().startsWith('•') ||
+        line.trim().startsWith('*'))
+    ) {
+      const content = line.replace(/^[-•*]\s*/, '').trim();
       if (content) {
         sections[currentSection].push(content);
       }
@@ -182,7 +187,6 @@ function generateFallbackReflection(weekData) {
     suggestions: []
   };
 
-  // What went well
   if (completionRate >= 80) {
     sections.whatWentWell.push('Excellent completion rate - you stayed consistent!');
     sections.whatWentWell.push('Strong commitment to your goals this week');
@@ -193,16 +197,13 @@ function generateFallbackReflection(weekData) {
     sections.whatWentWell.push(`Completed ${completedTasks} tasks - that's still progress`);
   }
 
-  // What went wrong
   if (missedTasks > 0) {
     sections.whatWentWrong.push(`${missedTasks} tasks were skipped or incomplete`);
-    
     if (completionRate < 50) {
       sections.whatWentWrong.push('More than half of planned tasks were missed');
     }
   }
 
-  // Possible reasons
   if (mood === 'tired' || mood === 'stressed') {
     sections.possibleReasons.push(`Your mood (${mood}) may have impacted energy levels`);
   }
@@ -210,10 +211,9 @@ function generateFallbackReflection(weekData) {
     sections.possibleReasons.push('Weekly plan may have been too ambitious');
   }
 
-  // Suggestions
   sections.suggestions.push('Start with smaller, achievable tasks to build momentum');
   sections.suggestions.push('Focus on consistency over perfection');
-  
+
   if (completionRate < 70) {
     sections.suggestions.push('Reduce task difficulty or quantity for next week');
   }

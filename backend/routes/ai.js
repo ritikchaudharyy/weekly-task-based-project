@@ -8,6 +8,9 @@ const { generateWeeklyReflection } = require('../ai/weeklyReflection');
 const { checkOverthinking } = require('../ai/overthinkingGuard');
 const { callAI } = require('../ai/aiAPI');
 
+// Response helper
+const { successResponse } = require('../utils/apiResponse');
+
 /*
 |--------------------------------------------------------------------------
 | AI ROUTES – PHASE 2
@@ -53,15 +56,16 @@ Generate tasks now:`;
       .map(line => line.replace(/^[•\-]\s*/, '').trim())
       .filter(Boolean);
 
-    res.json({
-      success: true,
-      goalName,
-      tasks
-    });
+    return res.json(
+      successResponse({
+        goalName,
+        tasks
+      })
+    );
 
   } catch (error) {
     console.error('AI Task Generation Error:', error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to generate tasks',
       error: error.message
@@ -84,11 +88,14 @@ router.post('/check-feasibility', async (req, res) => {
     }
 
     const analysis = await checkFeasibility(weeklyPlan);
-    res.json(analysis);
+
+    return res.json(
+      successResponse(analysis)
+    );
 
   } catch (error) {
     console.error('Feasibility Check Error:', error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to check feasibility',
       error: error.message
@@ -116,11 +123,13 @@ router.post('/suggest-downgrade', async (req, res) => {
       missedCount || 2
     );
 
-    res.json(suggestion);
+    return res.json(
+      successResponse(suggestion)
+    );
 
   } catch (error) {
     console.error('Task Downgrade Error:', error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to generate downgrade suggestion',
       error: error.message
@@ -143,11 +152,16 @@ router.post('/weekly-reflection', async (req, res) => {
     }
 
     const reflection = await generateWeeklyReflection(weekData);
-    res.json(reflection);
+
+    return res.json(
+      successResponse(reflection, {
+        week: weekData.week || 'current'
+      })
+    );
 
   } catch (error) {
     console.error('Weekly Reflection Error:', error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to generate weekly reflection',
       error: error.message
@@ -174,11 +188,18 @@ router.post('/check-overthinking', async (req, res) => {
       daysInactive || 0
     );
 
-    res.json(guardResponse);
+    return res.json(
+      successResponse({
+        triggered: guardResponse.triggered,
+        severity: guardResponse.severity,
+        reason: guardResponse.reason,
+        message: guardResponse.message
+      })
+    );
 
   } catch (error) {
     console.error('Overthinking Guard Error:', error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to check overthinking',
       error: error.message
@@ -222,14 +243,15 @@ Give 3-5 concise bullet insights to optimize this week.`;
 
     const insights = await callAI(prompt);
 
-    res.json({
-      success: true,
-      insights
-    });
+    return res.json(
+      successResponse({
+        insights
+      })
+    );
 
   } catch (error) {
     console.error('AI Insights Error:', error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to generate insights',
       error: error.message

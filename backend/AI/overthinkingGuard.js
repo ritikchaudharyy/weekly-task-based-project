@@ -5,18 +5,16 @@ const { callAI } = require('./aiAPI');
  * Detects excessive planning and encourages execution
  * @param {number} editCount - Number of plan edits
  * @param {number} daysInactive - Days since last task completion
- * @returns {Promise<Object>} - Guard response
+ * @returns {Promise<Object>} - Guard result (DATA ONLY)
  */
 async function checkOverthinking(editCount, daysInactive = 0) {
   try {
-    // Rule-based thresholds
     const isOverthinking = editCount >= 5;
     const isSevereOverthinking = editCount >= 10;
     const longInactive = daysInactive >= 3;
 
     if (!isOverthinking && !longInactive) {
       return {
-        success: true,
         triggered: false,
         message: null
       };
@@ -31,13 +29,12 @@ async function checkOverthinking(editCount, daysInactive = 0) {
     } else if (isOverthinking) {
       message = await generateAIWarning(editCount, 'moderate');
       severity = 'moderate';
-    } else if (longInactive) {
+    } else {
       message = getInactivityMessage(daysInactive);
       severity = 'inactive';
     }
 
     return {
-      success: true,
       triggered: true,
       severity,
       editCount,
@@ -50,17 +47,17 @@ async function checkOverthinking(editCount, daysInactive = 0) {
     console.error('Overthinking Guard Error:', error.message);
 
     return {
-      success: true,
-      triggered: editCount >= 5,
+      triggered: editCount >= 5 || daysInactive >= 3,
       severity: editCount >= 10 ? 'severe' : 'moderate',
       message: getRuleBasedWarning(editCount),
-      fallbackMode: true
+      fallbackMode: true,
+      timestamp: new Date().toISOString()
     };
   }
 }
 
 /**
- * Generate AI warning message using unified AI fallback
+ * Generate AI warning message
  */
 async function generateAIWarning(editCount, severity) {
   const prompt = `You are a productivity coach. A student has edited their weekly plan ${editCount} times.
@@ -74,16 +71,10 @@ Write ONE short sentence that:
 
 Rules:
 - Max 20 words
-- Memorable
 - Action-focused
 - No quotes
 
-Examples:
-- Planning band karo, kaam shuru karo. Execution beats perfection.
-- You've refined this ${editCount} times. Time to DO, not plan.
-- Stop tweaking. Start working. Progress > Perfect plans.
-
-Message:`;  
+Message:`;
 
   const response = await callAI(prompt);
   return response.trim().replace(/['"]/g, '');
@@ -94,17 +85,14 @@ Message:`;
  */
 function getRuleBasedWarning(editCount) {
   if (editCount >= 10) {
-    return '🛑 STOP PLANNING! You\'ve edited this 10+ times. Start executing NOW.';
+    return '🛑 STOP PLANNING! You’ve edited this too many times. Start executing NOW.';
   }
-
   if (editCount >= 7) {
-    return '⚠️ Too much planning. Time to take action. Execution beats perfection.';
+    return '⚠️ Too much planning. Time to take action.';
   }
-
   if (editCount >= 5) {
-    return '💭 You\'ve planned enough. Start working on your first task right now.';
+    return '💭 You’ve planned enough. Start working on your first task now.';
   }
-
   return '📝 Your plan looks good. Time to execute!';
 }
 
@@ -113,26 +101,21 @@ function getRuleBasedWarning(editCount) {
  */
 function getInactivityMessage(daysInactive) {
   if (daysInactive >= 7) {
-    return '⏰ It\'s been a week! Your plan is waiting. Start with the easiest task today.';
+    return '⏰ It’s been a week. Start with the easiest task today.';
   }
-
   if (daysInactive >= 5) {
-    return '⏰ 5 days inactive. Don\'t let momentum die. Begin now.';
+    return '⏰ 5 days inactive. Don’t lose momentum.';
   }
-
-  return '⏰ 3+ days inactive. Even 10 minutes of work keeps progress alive.';
+  return '⏰ 3+ days inactive. Even 10 minutes helps.';
 }
 
 /**
- * Check if user should be warned
+ * Utility helpers (pure logic)
  */
 function shouldWarnUser(editCount, daysInactive) {
   return editCount >= 5 || daysInactive >= 3;
 }
 
-/**
- * Get severity level
- */
 function getSeverityLevel(editCount, daysInactive) {
   if (editCount >= 10) return 'critical';
   if (editCount >= 7 || daysInactive >= 7) return 'severe';
@@ -140,18 +123,14 @@ function getSeverityLevel(editCount, daysInactive) {
   return 'none';
 }
 
-/**
- * Generate execution nudge
- */
 function getExecutionNudge() {
   const nudges = [
-    '✅ Start with your easiest task right now',
-    '⚡ 10 minutes of action > hours of planning',
-    '🎯 Pick one task and begin. Don\'t think, just do.',
-    '💪 Momentum starts with one small step today',
-    '🚀 The best plan is the one you actually execute'
+    '✅ Start with your easiest task now',
+    '⚡ Action beats planning',
+    '🎯 Pick one task and begin',
+    '💪 Momentum starts today',
+    '🚀 Execute first, refine later'
   ];
-
   return nudges[Math.floor(Math.random() * nudges.length)];
 }
 
