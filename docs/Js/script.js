@@ -588,7 +588,7 @@ window.generateTasksWithAI = async function(index) {
   `;
 
   const result = await callAI('/ai/generate-tasks', {
-    goal: goal.name,
+    goalName: goal.name,
     timePerDay: "2 hours",
     currentLevel: "intermediate"
   });

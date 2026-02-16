@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 
 // Import AI modules
-const { checkFeasibility } = require('../ai/feasibilityCheck');
-const { suggestTaskDowngrade } = require('../ai/taskDowngrade');
-const { generateWeeklyReflection } = require('../ai/weeklyReflection');
-const { checkOverthinking } = require('../ai/overthinkingGuard');
-const { callAI } = require('../ai/aiAPI');
+const { checkFeasibility } = require('../AI/feasibilityCheck');
+const { suggestTaskDowngrade } = require('../AI/taskDowngrade');
+const { generateWeeklyReflection } = require('../AI/weeklyReflection');
+const { checkOverthinking } = require('../AI/overthinkingGuard');
+const { callAI } = require('../AI/aiAPI');
 
 // Response helper
 const { successResponse } = require('../utils/apiResponse');
