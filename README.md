@@ -522,3 +522,29 @@ Built with:
 ---
 
 *Last Updated: January 27, 2025*
+
+---
+
+## 🛒 PriceSense India MVP APIs
+
+This repository now includes a backend MVP module for **PriceSense India** under `/api/pricesense` with:
+
+- Marketplace tracking model for amazon.in, flipkart.in, blinkit.in, zepto.in, swiggy-instamart, chroma.in, jiomart
+- Daily 12-month price history aggregation and 12-month low computation
+- Near-low detection (default threshold: 3%)
+- Recommendation endpoint with budget + brand filtering and weighted quality score
+- Watchlist endpoint + simulated drop alert endpoint for push/popup workflow testing
+- Buy-cheapest URL in recommendation/summary payloads
+
+### New Endpoints
+
+- `GET /api/pricesense/products/:productId/summary`
+- `GET /api/pricesense/recommendations?brand=Vivo&budget=35000`
+- `POST /api/pricesense/watchlist`
+- `POST /api/pricesense/simulate-price-drop`
+
+### Quick test
+
+```bash
+npm run test:pricesense
+```
