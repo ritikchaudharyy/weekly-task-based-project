@@ -1,4 +1,4 @@
-# ✨ AI Weekly Focus Planner - Student Edition
+# AI Weekly Focus Planner - Student Edition
 
 > A comprehensive, AI-powered weekly task planning system designed specifically for students to organize goals, generate tasks intelligently, and optimize their study schedule with smart insights.
 
